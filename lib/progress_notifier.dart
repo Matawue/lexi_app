@@ -53,6 +53,13 @@ class ProgressNotifier extends Notifier<Map<String, bool>> {
       return listaPalabras;
     }
   }
+
+  /// Guarda la precisión del trazo de una letra para un nivel específico.
+  /// Se almacena de forma oculta para el tutor.
+  void guardarPrecisionLetra(String idNivel, int porcentaje) {
+    final box = Hive.box('rondasBox'); // Usamos la misma caja que para las rondas
+    box.put('${idNivel}_precision', porcentaje);
+  }
 }
 
 final progressNotifierProvider = NotifierProvider<ProgressNotifier, Map<String, bool>>(() {

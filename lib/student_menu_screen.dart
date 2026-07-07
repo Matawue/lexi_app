@@ -102,15 +102,31 @@ class _StudentMenuScreenState extends ConsumerState<StudentMenuScreen> {
       currentPicLevel++;
     }
 
-    // 2. Definir los otros caminos de aprendizaje.
-    final otherNodes = [
-      {'id': 'draw_A', 'title': 'Letra A', 'type': 'draw', 'locked': false, 'letra': 'A'},
-      {'id': 'draw_B', 'title': 'Letra B', 'type': 'draw', 'locked': progress['draw_A'] != true, 'letra': 'B'},
-      {'id': 'cuentos_1', 'title': 'Cuentos', 'type': 'story', 'locked': false}, // 🔓 TEMPORAL para pruebas — revertir a: progress['draw_B'] != true
-    ];
+    // 2. Generar nodos de trazado de letras para todo el abecedario.
+    final List<Map<String, dynamic>> drawingNodes = [];
+    const abecedario = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (int i = 0; i < abecedario.length; i++) {
+      final letra = abecedario[i];
+      final idNivel = 'draw_$letra';
+      // La primera letra ('A') no está bloqueada. Las demás dependen de la anterior.
+      final idNivelAnterior = i > 0 ? 'draw_${abecedario[i - 1]}' : null;
+      final isLocked = (idNivelAnterior != null) && (progress[idNivelAnterior] != true);
+
+      drawingNodes.add({
+        'id': idNivel,
+        'title': 'Letra $letra',
+        'type': 'draw',
+        'locked': isLocked,
+        'letra': letra,
+      });
+    }
 
     // 3. Combinar todos los nodos para construir el menú.
-    final nodes = [...pictogramNodes, ...otherNodes];
+    final nodes = [
+      ...pictogramNodes,
+      ...drawingNodes,
+      {'id': 'cuentos_1', 'title': 'Cuentos', 'type': 'story', 'locked': progress['draw_Z'] != true},
+    ];
 
     return Scaffold(
       appBar: AppBar(
