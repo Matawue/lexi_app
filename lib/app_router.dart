@@ -20,7 +20,13 @@ class AppRouter {
       case pictogramAssociation:
         return MaterialPageRoute(builder: (_) => const PictogramAssociationScreen());
       case letterDrawing:
-        return MaterialPageRoute(builder: (_) => const LetterDrawingScreen());
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final letra = args['letra'] as String? ?? 'A';
+        final idNivel = args['idNivel'] as String? ?? 'draw_A';
+        return MaterialPageRoute(
+          builder: (_) =>
+              LetterDrawingScreen(letra: letra, idNivel: idNivel),
+        );
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
