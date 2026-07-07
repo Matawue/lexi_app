@@ -6,6 +6,7 @@ import 'pictogram_association_screen.dart';
 import 'pet_garden_screen.dart';
 import 'tutor_statistics_screen.dart';
 import 'letter_drawing_screen.dart';
+import 'story_screen.dart';
 
 class AppRouter {
   static const String tutorDashboard = '/tutor';
@@ -14,6 +15,7 @@ class AppRouter {
   static const String petGarden = '/pet_garden';
   static const String tutorStatistics = '/tutor_statistics';
   static const String letterDrawing = '/letter_drawing';
+  static const String story = '/story';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -38,6 +40,12 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) =>
               LetterDrawingScreen(letra: letra, idNivel: idNivel),
+        );
+      case story:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final idNivel = args['idNivel'] as String? ?? 'cuentos_1';
+        return MaterialPageRoute(
+          builder: (_) => StoryScreen(idNivel: idNivel),
         );
       default:
         return MaterialPageRoute(

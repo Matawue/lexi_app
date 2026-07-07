@@ -60,6 +60,12 @@ class _StudentMenuScreenState extends ConsumerState<StudentMenuScreen> {
         AppRouter.letterDrawing,
         arguments: {'letra': node['letra'], 'idNivel': node['id']},
       );
+    } else if (node['type'] == 'story') {
+      Navigator.pushNamed(
+        context,
+        AppRouter.story,
+        arguments: {'idNivel': node['id']},
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('¡Nuevos cuentos muy pronto!')),
@@ -100,7 +106,7 @@ class _StudentMenuScreenState extends ConsumerState<StudentMenuScreen> {
     final otherNodes = [
       {'id': 'draw_A', 'title': 'Letra A', 'type': 'draw', 'locked': false, 'letra': 'A'},
       {'id': 'draw_B', 'title': 'Letra B', 'type': 'draw', 'locked': progress['draw_A'] != true, 'letra': 'B'},
-      {'id': 'cuentos_1', 'title': 'Cuentos', 'type': 'story', 'locked': progress['draw_B'] != true},
+      {'id': 'cuentos_1', 'title': 'Cuentos', 'type': 'story', 'locked': false}, // 🔓 TEMPORAL para pruebas — revertir a: progress['draw_B'] != true
     ];
 
     // 3. Combinar todos los nodos para construir el menú.
