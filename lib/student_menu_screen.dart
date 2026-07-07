@@ -49,7 +49,11 @@ class _StudentMenuScreenState extends ConsumerState<StudentMenuScreen> {
 
     // 4. Navegar a la pantalla correspondiente
     if (node['type'] == 'pic') {
-      Navigator.pushNamed(context, AppRouter.pictogramAssociation);
+      Navigator.pushNamed(
+        context,
+        AppRouter.pictogramAssociation,
+        arguments: {'levelId': node['id']},
+      );
     } else if (node['type'] == 'draw') {
       Navigator.pushNamed(
         context,
@@ -68,13 +72,39 @@ class _StudentMenuScreenState extends ConsumerState<StudentMenuScreen> {
     final appTheme = ref.watch(themeNotifierProvider);
     final progress = ref.watch(progressNotifierProvider);
 
-    // Lista plana de nodos, la alineación dependerá de su tipo
-    final nodes = [
-      {'id': 'pic_1', 'title': 'Pictogramas 1', 'type': 'pic', 'locked': false},
+    // Generación dinámica de nodos para un camino de aprendizaje infinito.
+
+    // 1. Generar nodos de pictogramas. Siempre muestra todos los completados
+    //    y el siguiente nivel bloqueado.
+    final List<Map<String, dynamic>> pictogramNodes = [];
+    int currentPicLevel = 1;
+    while (true) {
+      final levelId = 'pic_$currentPicLevel';
+      final prevLevelId = 'pic_${currentPicLevel - 1}';
+      final isLocked = (currentPicLevel > 1) && (progress[prevLevelId] != true);
+
+      pictogramNodes.add({
+        'id': levelId,
+        'title': 'Pictogramas $currentPicLevel',
+        'type': 'pic',
+        'locked': isLocked,
+      });
+
+      // Si el nivel actual no está completado, hemos añadido el siguiente
+      // nivel disponible y podemos parar.
+      if (progress[levelId] != true) break;
+      currentPicLevel++;
+    }
+
+    // 2. Definir los otros caminos de aprendizaje.
+    final otherNodes = [
       {'id': 'draw_A', 'title': 'Letra A', 'type': 'draw', 'locked': false, 'letra': 'A'},
       {'id': 'draw_B', 'title': 'Letra B', 'type': 'draw', 'locked': progress['draw_A'] != true, 'letra': 'B'},
       {'id': 'cuentos_1', 'title': 'Cuentos', 'type': 'story', 'locked': progress['draw_B'] != true},
     ];
+
+    // 3. Combinar todos los nodos para construir el menú.
+    final nodes = [...pictogramNodes, ...otherNodes];
 
     return Scaffold(
       appBar: AppBar(
@@ -86,6 +116,15 @@ class _StudentMenuScreenState extends ConsumerState<StudentMenuScreen> {
             onPressed: () => Navigator.pushNamed(context, AppRouter.tutorDashboard),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.pushNamed(context, AppRouter.petGarden);
+        },
+        label: const Text('Mis Mascotas'),
+        icon: const Icon(Icons.pets),
+        backgroundColor: Colors.amber.shade700,
+        foregroundColor: Colors.white,
       ),
       body: Stack(
         alignment: Alignment.center,
@@ -99,20 +138,47 @@ class _StudentMenuScreenState extends ConsumerState<StudentMenuScreen> {
               color: appTheme.primaryColor.withOpacity(0.2),
             ),
           ),
-          ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 40),
-            itemCount: nodes.length,
-            itemBuilder: (context, index) {
-              return _buildNode(context, nodes[index], appTheme.primaryColor, progress);
-            },
-          ),
+          LayoutBuilder(builder: (context, constraints) {
+            // Usar un layout diferente para pantallas anchas (tablets, web)
+            if (constraints.maxWidth > 600) {
+              return _buildWideLayout(context, nodes, appTheme.primaryColor, progress);
+            } else {
+              return _buildNarrowLayout(context, nodes, appTheme.primaryColor, progress);
+            }
+          }),
         ],
       ),
     );
   }
 
-  Widget _buildNode(BuildContext context, Map<String, dynamic> node, Color primaryColor, Map<String, bool> progress) {
-    // Alineación según la categoría: Pictogramas (Izquierda), Letras (Centro), Cuentos (Derecha)
+  // Layout para pantallas estrechas (móviles)
+  Widget _buildNarrowLayout(BuildContext context, List<Map<String, dynamic>> nodes, Color primaryColor, Map<String, bool> progress) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      itemCount: nodes.length,
+      itemBuilder: (context, index) {
+        return _buildNodeItem(context, nodes[index], primaryColor, progress, isWide: false);
+      },
+    );
+  }
+
+  // Layout para pantallas anchas (tablets/web)
+  Widget _buildWideLayout(BuildContext context, List<Map<String, dynamic>> nodes, Color primaryColor, Map<String, bool> progress) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 40, // Espacio horizontal entre nodos
+        runSpacing: 40, // Espacio vertical entre filas
+        children: nodes.map((node) {
+          return _buildNodeItem(context, node, primaryColor, progress, isWide: true);
+        }).toList(),
+      ),
+    );
+  }
+
+  // Alineación para el layout estrecho
+  Alignment _getNodeAlignment(Map<String, dynamic> node) {
     Alignment align;
     if (node['type'] == 'pic') {
       align = Alignment.centerLeft;
@@ -121,7 +187,31 @@ class _StudentMenuScreenState extends ConsumerState<StudentMenuScreen> {
     } else {
       align = Alignment.centerRight;
     }
+    return align;
+  }
 
+  Widget _buildNodeItem(BuildContext context, Map<String, dynamic> node, Color primaryColor, Map<String, bool> progress, {required bool isWide}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    // El tamaño del nodo es relativo al ancho de la pantalla en móviles, pero fijo en pantallas anchas
+    final double nodeSize = isWide ? 140 : screenWidth * 0.3;
+
+    final nodeWidget = _buildNodeContent(node, primaryColor, progress, nodeSize);
+
+    if (isWide) {
+      return nodeWidget;
+    }
+
+    // En layout estrecho, mantenemos la alineación original
+    return Align(
+      alignment: _getNodeAlignment(node),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.1, vertical: 30),
+        child: nodeWidget,
+      ),
+    );
+  }
+
+  Widget _buildNodeContent(Map<String, dynamic> node, Color primaryColor, Map<String, bool> progress, double nodeSize) {
     final String id = node['id'] as String;
     final bool isCompleted = progress[id] == true;
     final bool isLocked = node['locked'] as bool;
@@ -137,44 +227,38 @@ class _StudentMenuScreenState extends ConsumerState<StudentMenuScreen> {
       nodeColor = primaryColor;
     }
 
-    return Align(
-      alignment: align,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 30),
-        child: InkWell(
-          onTap: () => _handleTap(node, isLocked),
-          borderRadius: BorderRadius.circular(60),
-          child: Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: nodeColor,
-              border: Border.all(
-                color: (isCompleted || !isLocked) ? Colors.white : Colors.transparent,
-                width: 4,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+    return InkWell(
+      onTap: () => _handleTap(node, isLocked),
+      borderRadius: BorderRadius.circular(nodeSize / 2),
+      child: Container(
+        width: nodeSize,
+        height: nodeSize,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: nodeColor,
+          border: Border.all(
+            color: (isCompleted || !isLocked) ? Colors.white : Colors.transparent,
+            width: 4,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
             ),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  node['title'] as String,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: (isCompleted || !isLocked) ? Colors.white : Colors.grey.shade500,
-                  ),
-                ),
+          ],
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              node['title'] as String,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              style: TextStyle(
+                fontSize: nodeSize * 0.12, // Tamaño de fuente relativo al tamaño del nodo
+                fontWeight: FontWeight.bold,
+                color: (isCompleted || !isLocked) ? Colors.white : Colors.grey.shade500,
               ),
             ),
           ),

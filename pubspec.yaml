@@ -7,11 +7,15 @@ environment:
   sdk: ^3.9.0
 
 dependencies:
+  cloud_firestore: ^6.6.0
+  firebase_auth: ^6.5.4
+  firebase_core: ^4.11.0
   flutter:
     sdk: flutter
   flutter_riverpod: ^3.3.2
   flutter_tts: ^4.2.5
   go_router: ^17.2.3
+  google_sign_in: ^7.2.0
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   riverpod: ^3.3.2
@@ -27,3 +31,5 @@ flutter:
     - family: OpenDyslexic
       fonts:
         - asset: assets/fonts/OpenDyslexic-Regular.otf
+  assets:
+    - assets/images/google_logo.png

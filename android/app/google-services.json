@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "864309675440",
+    "project_id": "lexi-app-utem",
+    "storage_bucket": "lexi-app-utem.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:864309675440:android:098c3ff9ff6b0b6c9ec275",
+        "android_client_info": {
+          "package_name": "com.example.lexi_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCzAubNTLVHY9wV4hyQJ_izkfcK7BZHHBA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

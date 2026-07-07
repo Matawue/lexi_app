@@ -1,106 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+// Importamos el nuevo provider que controla la lógica del juego
+import 'pictogram_provider.dart';
 import 'theme_notifier.dart';
-import 'progress_notifier.dart';
-
-class Pregunta {
-  final IconData icono;
-  final String palabraCorrecta;
-  final List<String> opciones;
-
-  Pregunta(this.icono, this.palabraCorrecta, this.opciones);
-}
 
 class PictogramAssociationScreen extends ConsumerStatefulWidget {
-  const PictogramAssociationScreen({super.key});
+  final String levelId;
+  const PictogramAssociationScreen({super.key, required this.levelId});
 
   @override
-  ConsumerState<PictogramAssociationScreen> createState() =>
-      _PictogramAssociationScreenState();
+  ConsumerState<PictogramAssociationScreen> createState() => _PictogramAssociationScreenState();
 }
 
-class _PictogramAssociationScreenState
-    extends ConsumerState<PictogramAssociationScreen> {
-  int indiceActual = 0;
-  final Set<String> _opcionesIncorrectas = {};
-  bool _mostrarExito = false;
-
-  final List<Pregunta> _preguntas = [
-    Pregunta(Icons.pets, 'Perro', ['Gato', 'Perro', 'Pájaro']),
-    Pregunta(Icons.home, 'Casa', ['Escuela', 'Casa', 'Hospital']),
-    Pregunta(Icons.star, 'Estrella', ['Luna', 'Sol', 'Estrella']),
-  ];
-
-  void _checkAnswer(String selected) {
-    if (_mostrarExito) return; // Evitar múltiples clics
-
-    if (selected == _preguntas[indiceActual].palabraCorrecta) {
-      setState(() {
-        _mostrarExito = true;
-      });
-
-      // Aumentamos el tiempo a 2.5 segundos para que el niño alcance a leer el mensaje
-      Future.delayed(const Duration(milliseconds: 2500), () {
-        if (!mounted) return;
-
-        if (indiceActual == _preguntas.length - 1) {
-          // Marcar como superado el Nivel 1
-          ref.read(progressNotifierProvider.notifier).marcarCompletado('pic_1');
-          _showCompletionDialog();
-        } else {
-          setState(() {
-            indiceActual++;
-            _mostrarExito = false;
-            _opcionesIncorrectas.clear();
-          });
-        }
-      });
-    } else {
-      setState(() {
-        _opcionesIncorrectas.add(selected);
-      });
-    }
+class _PictogramAssociationScreenState extends ConsumerState<PictogramAssociationScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Usamos un microtask para asegurarnos de que el ref esté disponible.
+    Future.microtask(() {
+      ref.read(pictogramProvider.notifier).seleccionarNivel(widget.levelId);
+    });
   }
 
-  void _showCompletionDialog() {
+  void _showCompletionDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text('¡Buen trabajo!', textAlign: TextAlign.center),
-          content: const Icon(
-            Icons.star_rounded,
-            color: Colors.amber,
-            size: 100,
-          ),
+          content: const Icon(Icons.star_rounded, color: Colors.amber, size: 100),
           actionsAlignment: MainAxisAlignment.center,
           actions: [
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
               ),
               onPressed: () {
+                ref.read(pictogramProvider.notifier).onDialogDismissed();
                 Navigator.pop(context); // Cierra el diálogo
                 Navigator.pop(context); // Vuelve al mapa
               },
-              child: const Text(
-                'Volver al mapa',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18),
-              ),
+              child: const Text('Volver al mapa', style: TextStyle(fontSize: 18)),
             ),
           ],
         );
@@ -110,8 +56,26 @@ class _PictogramAssociationScreenState
 
   @override
   Widget build(BuildContext context) {
+    // Escuchamos cambios en el estado para mostrar el diálogo de completado
+    // sin reconstruir el widget innecesariamente.
+    ref.listen(pictogramProvider, (previous, next) {
+      if (next.nivelCompletado && (previous?.nivelCompletado == false)) {
+        _showCompletionDialog(context, ref);
+      }
+    });
+
+    // Observamos el estado para reconstruir la UI cuando sea necesario.
+    final gameState = ref.watch(pictogramProvider);
+    final notifier = ref.read(pictogramProvider.notifier);
     ref.watch(themeNotifierProvider);
-    final currentQuestion = _preguntas[indiceActual];
+
+    // Si el nivel aún no se ha cargado, muestra un indicador de carga.
+    if (gameState.preguntaActual == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Asociar Palabras')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Asociar Palabras')),
@@ -123,8 +87,7 @@ class _PictogramAssociationScreenState
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
-                value:
-                    (indiceActual) / _preguntas.length, // Se llena gradualmente
+                value: (gameState.indicePregunta) / gameState.nivelActual.length,
                 minHeight: 16,
                 backgroundColor: Colors.grey.shade200,
                 color: Theme.of(context).primaryColor,
@@ -136,32 +99,64 @@ class _PictogramAssociationScreenState
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 800),
-                      transitionBuilder:
-                          (Widget child, Animation<double> animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: child,
-                            );
-                          },
-                      child: Icon(
-                        currentQuestion.icono,
-                        key: ValueKey<int>(indiceActual),
-                        size: 150,
-                        // Si es correcto brilla sutilmente en verde pastel, si no, usa el color primario
-                        color: _mostrarExito
-                            ? Colors.lightGreen
-                            : Theme.of(context).primaryColor,
-                      ),
-                    ),
+                    Consumer(builder: (context, ref, _) {
+                      final palabra = gameState.preguntaActual!.palabraObjetivo;
+                      final imageUrlAsync = ref.watch(pictogramUrlProvider(palabra));
+
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 500),
+                        transitionBuilder: (Widget child, Animation<double> animation) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
+                        child: imageUrlAsync.when(
+                          loading: () => SizedBox(
+                            key: const ValueKey('loading'),
+                            height: 150,
+                            child: Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor)),
+                          ),
+                          error: (e, s) => Icon(
+                            Icons.image_not_supported_outlined,
+                            key: ValueKey<int>(gameState.indicePregunta),
+                            size: 150,
+                            color: Colors.grey.shade400,
+                          ),
+                          data: (imageUrl) => imageUrl != null
+                              ? ColorFiltered(
+                                  key: ValueKey<String>(imageUrl),
+                                  colorFilter: ColorFilter.mode(
+                                    gameState.mostrarExito ? Colors.lightGreen.withOpacity(0.5) : Colors.transparent,
+                                    BlendMode.color,
+                                  ),
+                                  child: Image.network(
+                                    imageUrl,
+                                    height: 150,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) => Icon(
+                                      Icons.image_not_supported_outlined,
+                                      size: 150,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.question_mark_rounded,
+                                  key: ValueKey<int>(gameState.indicePregunta),
+                                  size: 150,
+                                  color: Colors.grey.shade400,
+                                ),
+                        ),
+                      );
+                    }),
                     const SizedBox(height: 24),
-                    // Mensaje de refuerzo que confirma cuál era la palabra correcta
-                    AnimatedOpacity(
-                      opacity: _mostrarExito ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 400),
+                    // Reemplazamos AnimatedOpacity con Visibility para que el mensaje desaparezca
+                    // instantáneamente al cambiar de pregunta, evitando el "spoiler".
+                    Visibility(
+                      visible: gameState.mostrarExito,
+                      maintainState: true, // Mantiene el estado para evitar saltos de layout
+                      maintainAnimation: true,
+                      maintainSize: true,
                       child: Text(
-                        '¡Excelente! Era "${currentQuestion.palabraCorrecta}"',
+                        '¡Excelente! Era "${gameState.palabraAcertada ?? ''}"',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 22,
@@ -177,11 +172,12 @@ class _PictogramAssociationScreenState
             const SizedBox(height: 40),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: currentQuestion.opciones.map((opcion) {
+              children: gameState.preguntaActual!.opciones.map((opcion) {
                 return _buildOptionButton(
                   context,
                   opcion,
-                  currentQuestion.palabraCorrecta,
+                  gameState,
+                  notifier,
                 );
               }).toList(),
             ),
@@ -195,11 +191,12 @@ class _PictogramAssociationScreenState
   Widget _buildOptionButton(
     BuildContext context,
     String opcion,
-    String palabraCorrecta,
+    PictogramState gameState,
+    PictogramNotifier notifier,
   ) {
-    final bool esIncorrecta = _opcionesIncorrectas.contains(opcion);
+    final bool esIncorrecta = gameState.opcionesIncorrectas.contains(opcion);
     final bool esCorrectaSeleccionada =
-        _mostrarExito && opcion == palabraCorrecta;
+        gameState.mostrarExito && opcion == gameState.preguntaActual!.palabraObjetivo;
 
     return Expanded(
       child: Padding(
@@ -222,9 +219,9 @@ class _PictogramAssociationScreenState
               foregroundColor:
                   Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
             ),
-            onPressed: (esIncorrecta || _mostrarExito)
+            onPressed: (esIncorrecta || gameState.mostrarExito)
                 ? null
-                : () => _checkAnswer(opcion),
+                : () => notifier.checkAnswer(opcion),
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(

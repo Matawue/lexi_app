@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'theme_notifier.dart';
 import 'app_theme.dart';
 import 'progress_notifier.dart';
+import 'auth_repository.dart';
+import 'app_router.dart';
 
 class TutorDashboardScreen extends ConsumerWidget {
   const TutorDashboardScreen({super.key});
@@ -25,6 +27,15 @@ class TutorDashboardScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Panel del Tutor'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Cerrar Sesión',
+            onPressed: () {
+              ref.read(authRepositoryProvider).signOut();
+            },
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
@@ -67,36 +78,95 @@ class TutorDashboardScreen extends ConsumerWidget {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            color: Colors.white,
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Decidir el número de columnas basado en el ancho disponible
+              final crossAxisCount = (constraints.maxWidth < 600) ? 2 : 3;
+
+              return GridView.count(
+                crossAxisCount: crossAxisCount,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 1.2, // Ajustar para que las tarjetas no sean tan altas
+                children: [
+                  _buildKPICard(
+                    'Actividades Completadas',
+                    '${progress.length}',
+                    Icons.check_circle_outline,
+                    Colors.green,
+                  ),
+                  _buildKPICard(
+                    'Precisión Promedio',
+                    '85%', // Valor simulado para MVP
+                    Icons.track_changes,
+                    Colors.blue,
+                  ),
+                  _buildKPICard(
+                    'Tiempo de Uso',
+                    '45 min', // Valor simulado para MVP
+                    Icons.timer_outlined,
+                    Colors.orange,
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 30),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.bar_chart),
+            label: const Text('Ver Informe Detallado'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            onPressed: () {
+              Navigator.pushNamed(context, AppRouter.tutorStatistics);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKPICard(String titulo, String valor, IconData icono, Color color) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 4,
+      shadowColor: Colors.black.withOpacity(0.1),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: Icon(icono, size: 32, color: color.withOpacity(0.7)),
+            ),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text(
-                    'Actividades completadas: ${progress.length}',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Text(valor, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  // Para evitar el desbordamiento, envolvemos el texto en Flexible y FittedBox.
+                  // Flexible permite que el widget ocupe el espacio restante.
+                  // FittedBox reduce el tamaño de la fuente si el texto es demasiado largo para el espacio.
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(titulo, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8.0,
-                    runSpacing: 8.0,
-                    children: progress.keys.map((idNivel) {
-                      return Chip(
-                        avatar: const Icon(Icons.check_circle, color: Colors.green),
-                        label: Text(idNivel),
-                        backgroundColor: Colors.green.shade50,
-                      );
-                    }).toList(),
-                  )
                 ],
               ),
             ),
-          )
-        ],
+          ],
+        ),
       ),
     );
   }
