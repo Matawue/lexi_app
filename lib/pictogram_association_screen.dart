@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Importamos el nuevo provider que controla la lógica del juego
 import 'pictogram_provider.dart';
 import 'theme_notifier.dart';
+import 'auth_repository.dart';
+import 'actividad_record.dart';
+import 'historial_provider.dart';
 
 class PictogramAssociationScreen extends ConsumerStatefulWidget {
   final String levelId;
@@ -14,6 +17,10 @@ class PictogramAssociationScreen extends ConsumerStatefulWidget {
 }
 
 class _PictogramAssociationScreenState extends ConsumerState<PictogramAssociationScreen> {
+  // Marca cuándo empezó la ronda, para poder medir fluidez (tiempo de
+  // resolución) en el historial del tutor.
+  final DateTime _fechaInicio = DateTime.now();
+
   @override
   void initState() {
     super.initState();
@@ -60,6 +67,20 @@ class _PictogramAssociationScreenState extends ConsumerState<PictogramAssociatio
     // sin reconstruir el widget innecesariamente.
     ref.listen(pictogramProvider, (previous, next) {
       if (next.nivelCompletado && (previous?.nivelCompletado == false)) {
+        final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
+        if (uid != null) {
+          ref.read(historialRepositoryProvider).registrarActividad(
+                uid,
+                ActividadRecord(
+                  idNivel: next.levelId ?? widget.levelId,
+                  tipo: 'pictograma',
+                  titulo: 'Pictogramas ${(next.levelId ?? widget.levelId).split('_').last}',
+                  fechaInicio: _fechaInicio,
+                  fechaFin: DateTime.now(),
+                  precision: 100, // acertó las 3 palabras sin límite de intentos por pregunta
+                ),
+              );
+        }
         _showCompletionDialog(context, ref);
       }
     });

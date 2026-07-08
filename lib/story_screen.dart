@@ -5,6 +5,9 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'story_provider.dart';
 import 'pictogram_provider.dart'; // reutiliza pictogramUrlProvider (ARASAAC)
 import 'theme_notifier.dart';
+import 'auth_repository.dart';
+import 'actividad_record.dart';
+import 'historial_provider.dart';
 
 class StoryScreen extends ConsumerStatefulWidget {
   final String idNivel;
@@ -18,6 +21,7 @@ class StoryScreen extends ConsumerStatefulWidget {
 class _StoryScreenState extends ConsumerState<StoryScreen> {
   final FlutterTts _flutterTts = FlutterTts();
   String? _ultimoTextoLeido;
+  final DateTime _fechaInicio = DateTime.now();
 
   @override
   void initState() {
@@ -88,6 +92,24 @@ class _StoryScreenState extends ConsumerState<StoryScreen> {
       if (next.cuentoCompletado && (previous?.cuentoCompletado != true)) {
         final acerto = next.cuento != null &&
             next.respuestaSeleccionada == next.cuento!.preguntaFinal.opcionCorrecta;
+
+        final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
+        if (uid != null && next.cuento != null) {
+          ref.read(historialRepositoryProvider).registrarActividad(
+                uid,
+                ActividadRecord(
+                  idNivel: next.cuento!.id,
+                  tipo: 'cuento',
+                  titulo: next.cuento!.titulo,
+                  fechaInicio: _fechaInicio,
+                  fechaFin: DateTime.now(),
+                  // Zen: no castigamos con un número bajo por fallar la
+                  // pregunta final, pero sí reflejamos si acertó o no.
+                  precision: acerto ? 100 : 60,
+                ),
+              );
+        }
+
         _mostrarDialogoCierre(context, acerto);
       }
     });
