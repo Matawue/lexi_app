@@ -139,15 +139,7 @@ class _StudentMenuScreenState extends ConsumerState<StudentMenuScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.pushNamed(context, AppRouter.petGarden);
-        },
-        label: const Text('Mis Mascotas'),
-        icon: const Icon(Icons.pets),
-        backgroundColor: Colors.amber.shade700,
-        foregroundColor: Colors.white,
-      ),
+     
       body: Stack(
         alignment: Alignment.center,
         children: [

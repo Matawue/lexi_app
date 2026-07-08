@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'theme_notifier.dart';
 import 'app_theme.dart';
-import 'progress_notifier.dart';
 import 'auth_repository.dart';
 import 'app_router.dart';
+import 'historial_provider.dart';
 
 class TutorDashboardScreen extends ConsumerWidget {
   const TutorDashboardScreen({super.key});
@@ -19,10 +19,8 @@ class TutorDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appTheme = ref.watch(themeNotifierProvider);
+    final historialAsync = ref.watch(historialProvider);
     final currentPalette = _currentPalette(appTheme);
-    
-    // Leer progreso de Hive reactivamente
-    final progress = ref.watch(progressNotifierProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -78,41 +76,52 @@ class TutorDashboardScreen extends ConsumerWidget {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              // Decidir el número de columnas basado en el ancho disponible
-              final crossAxisCount = (constraints.maxWidth < 600) ? 2 : 3;
+          historialAsync.when(
+              loading: () => const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: CircularProgressIndicator())),
+              error: (err, stack) => Center(child: Text('Error: $err')),
+              data: (historial) {
+                final precisionPromedio =
+                    HistorialMetrics.precisionPromedio(historial);
+                final tiempoTotal = HistorialMetrics.tiempoTotal(historial);
 
-              return GridView.count(
-                crossAxisCount: crossAxisCount,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.2, // Ajustar para que las tarjetas no sean tan altas
-                children: [
-                  _buildKPICard(
-                    'Actividades Completadas',
-                    '${progress.length}',
-                    Icons.check_circle_outline,
-                    Colors.green,
-                  ),
-                  _buildKPICard(
-                    'Precisión Promedio',
-                    '85%', // Valor simulado para MVP
-                    Icons.track_changes,
-                    Colors.blue,
-                  ),
-                  _buildKPICard(
-                    'Tiempo de Uso',
-                    '45 min', // Valor simulado para MVP
-                    Icons.timer_outlined,
-                    Colors.orange,
-                  ),
-                ],
-              );
-            },
-          ),
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final crossAxisCount = (constraints.maxWidth < 600) ? 2 : 3;
+
+                    return GridView.count(
+                      crossAxisCount: crossAxisCount,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1.2,
+                      children: [
+                        _buildKPICard(
+                          'Actividades Totales',
+                          '${historial.length}',
+                          Icons.check_circle_outline,
+                          Colors.green,
+                        ),
+                        _buildKPICard(
+                          'Precisión Promedio',
+                          '${precisionPromedio.round()}%',
+                          Icons.track_changes,
+                          Colors.blue,
+                        ),
+                        _buildKPICard(
+                          'Tiempo de Uso',
+                          '${tiempoTotal.inMinutes} min',
+                          Icons.timer_outlined,
+                          Colors.orange,
+                        ),
+                      ],
+                    );
+                  },
+                );
+              }),
           const SizedBox(height: 30),
           ElevatedButton.icon(
             icon: const Icon(Icons.bar_chart),

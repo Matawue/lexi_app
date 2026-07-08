@@ -19,11 +19,13 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   riverpod: ^3.3.2
+  
 
 dev_dependencies:
   flutter_lints: ^5.0.0
   flutter_test:
     sdk: flutter
+  share_plus: ^12.0.2
 
 flutter:
   uses-material-design: true

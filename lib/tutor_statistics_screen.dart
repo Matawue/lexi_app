@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'theme_notifier.dart';
 import 'actividad_record.dart';
 import 'historial_provider.dart';
+import 'csv_exporter.dart';
+import 'fluidez_card.dart';
 
 class TutorStatisticsScreen extends ConsumerWidget {
   const TutorStatisticsScreen({super.key});
@@ -71,14 +73,38 @@ class _EstadoVacio extends StatelessWidget {
   }
 }
 
-class _Contenido extends StatelessWidget {
+class _Contenido extends StatefulWidget {
   final List<ActividadRecord> historial;
   final Color primaryColor;
 
   const _Contenido({required this.historial, required this.primaryColor});
 
   @override
+  State<_Contenido> createState() => _ContenidoState();
+}
+
+class _ContenidoState extends State<_Contenido> {
+  bool _exportando = false;
+
+  Future<void> _exportarCsv() async {
+    setState(() => _exportando = true);
+    try {
+      await CsvExporter.exportarYCompartir(widget.historial);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo exportar el reporte: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exportando = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final historial = widget.historial;
+    final primaryColor = widget.primaryColor;
     final estaSemana = HistorialMetrics.ultimaSemana(historial);
     final semanaPasada = HistorialMetrics.semanaAnterior(historial);
     final racha = HistorialMetrics.rachaDeDias(historial);
@@ -88,12 +114,37 @@ class _Contenido extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: [
+        _buildExportButton(),
+        const SizedBox(height: 16),
         _buildKpiRow(context, historial, precisionPromedio, tiempoTotal, racha),
         const SizedBox(height: 24),
         _buildComparisonCard(context, primaryColor, estaSemana, semanaPasada),
         const SizedBox(height: 24),
+        FluidezCard(historial: historial, primaryColor: primaryColor),
+        const SizedBox(height: 24),
         _buildHistoryCard(historial),
       ],
+    );
+  }
+
+  Widget _buildExportButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _exportando ? null : _exportarCsv,
+        icon: _exportando
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.file_download_outlined),
+        label: Text(_exportando ? 'Generando reporte...' : 'Exportar a CSV'),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
     );
   }
 

@@ -75,6 +75,23 @@ class HistorialMetrics {
     return suma / actividades.length;
   }
 
+  /// Filtra el historial a un solo tipo de actividad ('pictograma', 'letra',
+  /// 'cuento'). Necesario para comparar fluidez entre actividades iguales
+  /// — comparar el tiempo de un cuento contra el de un pictograma no dice
+  /// nada útil, son tareas de duración natural distinta.
+  static List<ActividadRecord> porTipo(List<ActividadRecord> historial, String tipo) {
+    return historial.where((a) => a.tipo == tipo).toList();
+  }
+
+  /// Duración promedio en segundos de un conjunto de actividades. Esta es
+  /// la base de la "curva de fluidez": si baja con el tiempo, el niño
+  /// resuelve la misma tarea con más automatización cognitiva.
+  static double duracionPromedioSegundos(List<ActividadRecord> actividades) {
+    if (actividades.isEmpty) return 0;
+    final total = actividades.fold<int>(0, (acc, a) => acc + a.duracion.inSeconds);
+    return total / actividades.length;
+  }
+
   static Duration tiempoTotal(List<ActividadRecord> actividades) {
     return actividades.fold<Duration>(Duration.zero, (acc, a) => acc + a.duracion);
   }

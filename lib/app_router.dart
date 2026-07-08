@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'tutor_dashboard_screen.dart';
 import 'student_menu_screen.dart';
 import 'pictogram_association_screen.dart';
-import 'pet_garden_screen.dart';
 import 'tutor_statistics_screen.dart';
 import 'letter_drawing_screen.dart';
 import 'story_screen.dart';
@@ -12,7 +11,6 @@ class AppRouter {
   static const String tutorDashboard = '/tutor';
   static const String studentLearningModule = '/student';
   static const String pictogramAssociation = '/pictogram';
-  static const String petGarden = '/pet_garden';
   static const String tutorStatistics = '/tutor_statistics';
   static const String letterDrawing = '/letter_drawing';
   static const String story = '/story';
@@ -29,8 +27,6 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => PictogramAssociationScreen(levelId: levelId),
         );
-      case petGarden:
-        return MaterialPageRoute(builder: (_) => const PetGardenScreen());
       case tutorStatistics:
         return MaterialPageRoute(builder: (_) => const TutorStatisticsScreen());
       case letterDrawing:
